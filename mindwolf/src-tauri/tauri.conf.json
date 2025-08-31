@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mindwolf",
+  "productName": "智狼",
   "version": "0.1.0",
   "identifier": "com.admin.mindwolf",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "mindwolf",
+        "title": "智狼 (MindWolf) - AI狼人杀游戏",
         "width": 800,
         "height": 600
       }
