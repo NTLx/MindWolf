@@ -50,6 +50,18 @@ impl From<reqwest::Error> for AppError {
     }
 }
 
+impl From<tokio_tungstenite::tungstenite::Error> for AppError {
+    fn from(err: tokio_tungstenite::tungstenite::Error) -> Self {
+        AppError::Network(format!("WebSocket错误: {}", err))
+    }
+}
+
+impl From<tokio_tungstenite::tungstenite::http::Error> for AppError {
+    fn from(err: tokio_tungstenite::tungstenite::http::Error) -> Self {
+        AppError::Network(format!("HTTP错误: {}", err))
+    }
+}
+
 #[cfg(feature = "sqlx")]
 impl From<sqlx::Error> for AppError {
     fn from(err: sqlx::Error) -> Self {

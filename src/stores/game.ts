@@ -13,10 +13,22 @@ export const useGameStore = defineStore('game', () => {
     provider: 'openai',
     apiKey: '',
     baseUrl: 'https://api.openai.com',
-    model: 'gpt-4',
+    model: 'gpt-4o-realtime-preview-2024-12-17',
     maxTokens: 2000,
     temperature: 0.7,
-    timeout: 60
+    timeout: 60,
+    useRealtimeApi: false, // 默认使用传统API
+    voice: 'alloy',
+    inputAudioFormat: 'pcm16',
+    outputAudioFormat: 'pcm16',
+    modalities: ['text', 'audio'],
+    instructions: '你是一个狼人杀游戏AI助手',
+    turnDetection: {
+      detectionType: 'server_vad',
+      threshold: 0.5,
+      prefixPaddingMs: 300,
+      silenceDurationMs: 200
+    }
   })
   const gameConfig = ref<GameConfig>({
     totalPlayers: 8,

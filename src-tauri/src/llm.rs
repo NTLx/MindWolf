@@ -5,6 +5,8 @@ use serde_json::{json, Value};
 use std::time::Duration;
 use tokio::time::sleep;
 use log::{info, warn, error};
+use futures_util::{SinkExt, StreamExt};
+use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 /// LLM客户端管理器
 #[derive(Clone)]
@@ -24,8 +26,19 @@ impl LLMClient {
         Self { client, config }
     }
     
-    /// 发送聊天补全请求
+    /// 发送聊天补全请求（传统API）
     pub async fn chat_completion(&self, messages: Vec<ChatMessage>) -> AppResult<String> {
+        if self.config.use_realtime_api {
+            // 使用实时API
+            self.realtime_completion(messages).await
+        } else {
+            // 使用传统API
+            self.traditional_completion(messages).await
+        }
+    }
+    
+    /// 传统聊天补全请求
+    async fn traditional_completion(&self, messages: Vec<ChatMessage>) -> AppResult<String> {
         let request_body = json!({
             "model": self.config.model,
             "messages": messages,
@@ -67,11 +80,164 @@ impl LLMClient {
         Ok(content.to_string())
     }
     
+    /// 实时API聊天补全请求
+    async fn realtime_completion(&self, messages: Vec<ChatMessage>) -> AppResult<String> {
+        // 1. 创建会话获取临时令牌
+        let session_response = self.create_realtime_session().await?;
+        
+        // 2. 建立WebSocket连接
+        let ws_url = format!("wss://{}/v1/realtime?model={}", 
+            self.config.base_url.replace("https://", "").replace("http://", ""),
+            self.config.model
+        );
+        
+        let request = tokio_tungstenite::tungstenite::http::Request::builder()
+            .uri(&ws_url)
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("OpenAI-Beta", "realtime=v1")
+            .body(())?;
+        
+        let (ws_stream, _) = connect_async(request).await
+            .map_err(|e| AppError::LlmApi(format!("WebSocket连接失败: {}", e)))?;
+        
+        let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+        
+        // 3. 发送会话更新事件
+        let session_update = json!({
+            "type": "session.update",
+            "session": {
+                "modalities": self.config.modalities,
+                "instructions": self.config.instructions,
+                "voice": self.config.voice,
+                "input_audio_format": self.config.input_audio_format,
+                "output_audio_format": self.config.output_audio_format,
+                "turn_detection": self.config.turn_detection,
+                "temperature": self.config.temperature,
+                "max_response_output_tokens": self.config.max_tokens
+            }
+        });
+        
+        ws_sender.send(Message::Text(session_update.to_string())).await
+            .map_err(|e| AppError::LlmApi(format!("发送会话更新失败: {}", e)))?;
+        
+        // 4. 发送对话内容
+        let conversation_item = json!({
+            "type": "conversation.item.create",
+            "item": {
+                "type": "message",
+                "role": "user",
+                "content": [{
+                    "type": "input_text",
+                    "text": messages.last().map(|m| m.content.as_str()).unwrap_or("")
+                }]
+            }
+        });
+        
+        ws_sender.send(Message::Text(conversation_item.to_string())).await
+            .map_err(|e| AppError::LlmApi(format!("发送对话项失败: {}", e)))?;
+        
+        // 5. 创建响应
+        let response_create = json!({
+            "type": "response.create",
+            "response": {
+                "modalities": ["text"],
+                "instructions": "请简洁回答用户的问题"
+            }
+        });
+        
+        ws_sender.send(Message::Text(response_create.to_string())).await
+            .map_err(|e| AppError::LlmApi(format!("创建响应失败: {}", e)))?;
+        
+        // 6. 接收响应
+        let mut response_content = String::new();
+        
+        while let Some(message) = ws_receiver.next().await {
+            match message {
+                Ok(Message::Text(text)) => {
+                    if let Ok(event) = serde_json::from_str::<Value>(&text) {
+                        if let Some(event_type) = event.get("type").and_then(|t| t.as_str()) {
+                            match event_type {
+                                "response.content_part.added" => {
+                                    if let Some(part) = event.get("part") {
+                                        if let Some(text) = part.get("text").and_then(|t| t.as_str()) {
+                                            response_content.push_str(text);
+                                        }
+                                    }
+                                }
+                                "response.done" => {
+                                    break;
+                                }
+                                "error" => {
+                                    let error_msg = event.get("error")
+                                        .and_then(|e| e.get("message"))
+                                        .and_then(|m| m.as_str())
+                                        .unwrap_or("Unknown error");
+                                    return Err(AppError::LlmApi(format!("实时API错误: {}", error_msg)));
+                                }
+                                _ => {
+                                    // 处理其他事件类型
+                                    info!("收到事件: {}", event_type);
+                                }
+                            }
+                        }
+                    }
+                }
+                Ok(Message::Close(_)) => {
+                    info!("WebSocket连接已关闭");
+                    break;
+                }
+                Err(e) => {
+                    error!("WebSocket接收错误: {}", e);
+                    return Err(AppError::LlmApi(format!("WebSocket接收错误: {}", e)));
+                }
+                _ => {}
+            }
+        }
+        
+        if response_content.is_empty() {
+            Err(AppError::LlmApi("未收到有效响应".to_string()))
+        } else {
+            Ok(response_content)
+        }
+    }
+    
+    /// 创建实时会话
+    async fn create_realtime_session(&self) -> AppResult<Value> {
+        let session_body = json!({
+            "model": self.config.model,
+            "voice": self.config.voice.as_ref().unwrap_or(&"alloy".to_string())
+        });
+        
+        let response = self.client
+            .post(&format!("{}/v1/realtime/sessions", self.config.base_url))
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Content-Type", "application/json")
+            .json(&session_body)
+            .send()
+            .await?;
+        
+        let response_json: Value = response.json().await?;
+        
+        if let Some(error) = response_json.get("error") {
+            return Err(AppError::LlmApi(
+                error.get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("Unknown session creation error")
+                    .to_string()
+            ));
+        }
+        
+        Ok(response_json)
+    }
+    
     /// 测试连接
     pub async fn test_connection(&self) -> AppResult<bool> {
         let test_messages = vec![ChatMessage {
             role: "user".to_string(),
             content: "Hello".to_string(),
+            id: Some(format!("msg_{}", chrono::Utc::now().timestamp_millis())),
+            timestamp: Some(chrono::Utc::now()),
+            content_type: Some("text".to_string()),
         }];
         
         match self.chat_completion(test_messages).await {
@@ -92,6 +258,10 @@ impl LLMClient {
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
+    // 兼容实时API的附加字段
+    pub id: Option<String>,
+    pub timestamp: Option<chrono::DateTime<chrono::Utc>>,
+    pub content_type: Option<String>, // "text", "audio", "function_call"
 }
 
 /// 重试配置
@@ -209,6 +379,9 @@ impl LLMManager {
             ChatMessage {
                 role: "user".to_string(),
                 content: prompt.to_string(),
+                id: Some(format!("msg_{}", chrono::Utc::now().timestamp_millis())),
+                timestamp: Some(chrono::Utc::now()),
+                content_type: Some("text".to_string()),
             }
         ];
         

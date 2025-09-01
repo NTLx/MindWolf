@@ -39,10 +39,22 @@ impl Default for AppConfig {
                 provider: LLMProvider::OpenAI,
                 api_key: String::new(),
                 base_url: "https://api.openai.com".to_string(),
-                model: "gpt-4".to_string(),
+                model: "gpt-4o-realtime-preview-2024-12-17".to_string(),
                 max_tokens: 2000,
                 temperature: 0.7,
                 timeout: 60,
+                use_realtime_api: false, // 默认使用传统API
+                voice: Some("alloy".to_string()),
+                input_audio_format: Some("pcm16".to_string()),
+                output_audio_format: Some("pcm16".to_string()),
+                modalities: vec!["text".to_string(), "audio".to_string()],
+                instructions: Some("你是一个狼人杀游戏AI助手".to_string()),
+                turn_detection: Some(crate::types::TurnDetectionConfig {
+                    detection_type: "server_vad".to_string(),
+                    threshold: Some(0.5),
+                    prefix_padding_ms: Some(300),
+                    silence_duration_ms: Some(200),
+                }),
             },
             game: GameConfig {
                 total_players: 8,

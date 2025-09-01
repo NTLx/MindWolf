@@ -93,6 +93,47 @@ export interface LLMConfig {
   maxTokens: number;
   temperature: number;
   timeout: number;
+  // 实时API相关配置
+  useRealtimeApi?: boolean;
+  voice?: string;
+  inputAudioFormat?: string;
+  outputAudioFormat?: string;
+  modalities?: string[];
+  instructions?: string;
+  turnDetection?: TurnDetectionConfig;
+}
+
+export interface TurnDetectionConfig {
+  detectionType: string; // "server_vad" 或 "none"
+  threshold?: number;
+  prefixPaddingMs?: number;
+  silenceDurationMs?: number;
+}
+
+// 实时事件类型
+export interface RealtimeEvent {
+  eventId?: string;
+  eventType: string;
+  content: any;
+}
+
+// 实时会话配置
+export interface RealtimeSessionConfig {
+  modalities: string[];
+  instructions?: string;
+  voice?: string;
+  inputAudioFormat?: string;
+  outputAudioFormat?: string;
+  inputAudioTranscription?: TranscriptionConfig;
+  turnDetection?: TurnDetectionConfig;
+  tools?: any[];
+  toolChoice?: string;
+  temperature?: number;
+  maxResponseOutputTokens?: number;
+}
+
+export interface TranscriptionConfig {
+  model: string;
 }
 
 export interface GameAction {

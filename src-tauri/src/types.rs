@@ -121,6 +121,23 @@ pub struct LLMConfig {
     pub max_tokens: u32,
     pub temperature: f32,
     pub timeout: u64,
+    // 实时API相关配置
+    pub use_realtime_api: bool,
+    pub voice: Option<String>,
+    pub input_audio_format: Option<String>,
+    pub output_audio_format: Option<String>,
+    pub modalities: Vec<String>,
+    pub instructions: Option<String>,
+    pub turn_detection: Option<TurnDetectionConfig>,
+}
+
+/// 转向检测配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TurnDetectionConfig {
+    pub detection_type: String, // "server_vad" 或 "none"
+    pub threshold: Option<f32>,
+    pub prefix_padding_ms: Option<u32>,
+    pub silence_duration_ms: Option<u32>,
 }
 
 /// LLM提供商
@@ -168,6 +185,36 @@ pub struct ChatMessage {
     pub content: String,
     pub timestamp: DateTime<Utc>,
     pub message_type: MessageType,
+}
+
+/// 实时事件
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealtimeEvent {
+    pub event_id: Option<String>,
+    pub event_type: String,
+    pub content: serde_json::Value,
+}
+
+/// 实时会话配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealtimeSessionConfig {
+    pub modalities: Vec<String>,
+    pub instructions: Option<String>,
+    pub voice: Option<String>,
+    pub input_audio_format: Option<String>,
+    pub output_audio_format: Option<String>,
+    pub input_audio_transcription: Option<TranscriptionConfig>,
+    pub turn_detection: Option<TurnDetectionConfig>,
+    pub tools: Option<Vec<serde_json::Value>>,
+    pub tool_choice: Option<String>,
+    pub temperature: Option<f32>,
+    pub max_response_output_tokens: Option<u32>,
+}
+
+/// 转写配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptionConfig {
+    pub model: String,
 }
 
 /// 消息类型
