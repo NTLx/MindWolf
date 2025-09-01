@@ -1,0 +1,45 @@
+{
+  "llm": {
+    "provider": "OpenAI",
+    "api_key": "",
+    "base_url": "https://api.openai.com",
+    "model": "gpt-4o-realtime-preview-2024-12-17",
+    "max_tokens": 2000,
+    "temperature": 0.7,
+    "timeout": 60,
+    "use_realtime_api": false,
+    "voice": "alloy",
+    "input_audio_format": "pcm16",
+    "output_audio_format": "pcm16",
+    "modalities": [
+      "text",
+      "audio"
+    ],
+    "instructions": "你是一个狼人杀游戏AI助手",
+    "turn_detection": {
+      "detection_type": "server_vad",
+      "threshold": 0.5,
+      "prefix_padding_ms": 300,
+      "silence_duration_ms": 200
+    }
+  },
+  "game": {
+    "total_players": 8,
+    "role_distribution": {},
+    "discussion_time": 300,
+    "voting_time": 60,
+    "enable_voice": false
+  },
+  "voice": {
+    "enable_asr": false,
+    "enable_tts": true,
+    "speech_rate": 1.0,
+    "volume": 80
+  },
+  "app": {
+    "auto_save_replay": true,
+    "show_ai_thinking": true,
+    "theme": "auto",
+    "language": "zh-CN"
+  }
+}

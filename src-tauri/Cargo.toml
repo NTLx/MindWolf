@@ -50,7 +50,7 @@ dirs = "5.0"
 
 # Windows 便携式配置
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["winbase", "winnt", "processthreadsapi"] }
+winapi = { version = "0.3", features = ["winbase", "winnt", "processthreadsapi", "winuser"] }
 
 # 确保 WebView2 被静态链接
 [package.metadata.tauri]

@@ -8,7 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "build:portable": "vue-tsc --noEmit && vite build && tauri build --target x86_64-pc-windows-msvc",
+    "build:portable": "vue-tsc --noEmit && vite build && tauri build --target x86_64-pc-windows-msvc && node scripts/create-portable.js",
     "clean": "rm -rf dist src-tauri/target"
   },
   "dependencies": {

@@ -99,6 +99,13 @@ impl ConfigManager {
     
     /// 获取配置文件路径
     fn get_config_path() -> AppResult<PathBuf> {
+        // 尝试便携式模式：优先使用可执行文件目录
+        let portable_path = Self::get_portable_config_path();
+        if let Ok(path) = portable_path {
+            return Ok(path);
+        }
+        
+        // 回退到系统配置目录
         let mut path = dirs::config_dir()
             .ok_or_else(|| AppError::Config("无法获取配置目录".to_string()))?;
         
@@ -112,6 +119,25 @@ impl ConfigManager {
         
         path.push("config.json");
         Ok(path)
+    }
+    
+    /// 获取便携式配置路径
+    fn get_portable_config_path() -> AppResult<PathBuf> {
+        let exe_path = std::env::current_exe()
+            .map_err(|e| AppError::Config(format!("无法获取可执行文件路径: {}", e)))?;
+        
+        let exe_dir = exe_path.parent()
+            .ok_or_else(|| AppError::Config("无法获取可执行文件目录".to_string()))?;
+        
+        let config_dir = exe_dir.join("config");
+        
+        // 确保配置目录存在
+        if !config_dir.exists() {
+            std::fs::create_dir_all(&config_dir)
+                .map_err(|e| AppError::Config(format!("创建便携式配置目录失败: {}", e)))?;
+        }
+        
+        Ok(config_dir.join("config.json"))
     }
     
     /// 加载或创建配置
