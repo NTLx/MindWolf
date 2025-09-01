@@ -73,9 +73,9 @@ impl PersonalityManager {
         vec![
             // 逻辑分析型
             PersonalityTemplate {
-                id: \"analytical\".to_string(),
-                name: \"逻辑分析师\".to_string(),
-                description: \"冷静理性，善于逻辑推理，发言精准有条理\".to_string(),
+                id: "analytical".to_string(),
+                name: "逻辑分析师".to_string(),
+                description: "冷静理性，善于逻辑推理，发言精准有条理".to_string(),
                 base_traits: PersonalityTraits {
                     aggressiveness: 0.3,
                     logic: 0.9,
@@ -106,9 +106,9 @@ impl PersonalityManager {
             
             // 情绪冲动型
             PersonalityTemplate {
-                id: \"impulsive\".to_string(),
-                name: \"情绪冲动者\".to_string(),
-                description: \"感情丰富，容易激动，行为较为冲动\".to_string(),
+                id: "impulsive".to_string(),
+                name: "情绪冲动者".to_string(),
+                description: "感情丰富，容易激动，行为较为冲动".to_string(),
                 base_traits: PersonalityTraits {
                     aggressiveness: 0.8,
                     logic: 0.4,
@@ -139,9 +139,9 @@ impl PersonalityManager {
             
             // 狡猾欺骗型
             PersonalityTemplate {
-                id: \"deceptive\".to_string(),
-                name: \"狡猾欺骗者\".to_string(),
-                description: \"善于伪装和欺骗，发言具有迷惑性\".to_string(),
+                id: "deceptive".to_string(),
+                name: "狡猾欺骗者".to_string(),
+                description: "善于伪装和欺骗，发言具有迷惑性".to_string(),
                 base_traits: PersonalityTraits {
                     aggressiveness: 0.5,
                     logic: 0.7,
@@ -172,9 +172,9 @@ impl PersonalityManager {
             
             // 保守谨慎型
             PersonalityTemplate {
-                id: \"cautious\".to_string(),
-                name: \"保守谨慎者\".to_string(),
-                description: \"行事谨慎，不轻易表态，观察力强\".to_string(),
+                id: "cautious".to_string(),
+                name: "保守谨慎者".to_string(),
+                description: "行事谨慎，不轻易表态，观察力强".to_string(),
                 base_traits: PersonalityTraits {
                     aggressiveness: 0.2,
                     logic: 0.6,
@@ -205,9 +205,9 @@ impl PersonalityManager {
             
             // 领袖型
             PersonalityTemplate {
-                id: \"leader\".to_string(),
-                name: \"天生领袖\".to_string(),
-                description: \"具有领导力，善于组织和指挥，自信果断\".to_string(),
+                id: "leader".to_string(),
+                name: "天生领袖".to_string(),
+                description: "具有领导力，善于组织和指挥，自信果断".to_string(),
                 base_traits: PersonalityTraits {
                     aggressiveness: 0.7,
                     logic: 0.8,
@@ -238,9 +238,9 @@ impl PersonalityManager {
             
             // 随性自由型
             PersonalityTemplate {
-                id: \"chaotic\".to_string(),
-                name: \"随性自由者\".to_string(),
-                description: \"行为不可预测，思维跳跃，带来变数\".to_string(),
+                id: "chaotic".to_string(),
+                name: "随性自由者".to_string(),
+                description: "行为不可预测，思维跳跃，带来变数".to_string(),
                 base_traits: PersonalityTraits {
                     aggressiveness: 0.6,
                     logic: 0.3,
@@ -287,8 +287,8 @@ impl PersonalityManager {
         };
         
         AIPersonality {
-            id: format!(\"{}_variant_{}\", template.id, rng.gen::<u32>()),
-            name: format!(\"{}_变体\", template.name),
+            id: format!("{}_variant_{}", template.id, rng.gen::<u32>()),
+            name: format!("{}_变体", template.name),
             description: template.description.clone(),
             traits: varied_traits,
         }
@@ -306,19 +306,19 @@ impl PersonalityManager {
         };
         
         let personality_type = if traits.logic > 0.7 {
-            \"理性型\"
+            "理性型"
         } else if traits.aggressiveness > 0.7 {
-            \"攻击型\"
+            "攻击型"
         } else if traits.deception > 0.6 {
-            \"欺骗型\"
+            "欺骗型"
         } else {
-            \"平衡型\"
+            "平衡型"
         };
         
         AIPersonality {
-            id: format!(\"random_{}\", rng.gen::<u32>()),
-            name: format!(\"{}AI\", personality_type),
-            description: format!(\"具有{}特征的AI性格\", personality_type),
+            id: format!("random_{}", rng.gen::<u32>()),
+            name: format!("{}AI", personality_type),
+            description: format!("具有{}特征的AI性格", personality_type),
             traits,
         }
     }
@@ -362,9 +362,9 @@ impl PersonalityManager {
         }
         
         AIPersonality {
-            id: format!(\"{}_optimized\", base_personality.id),
-            name: format!(\"{}_优化版\", base_personality.name),
-            description: format!(\"{} (针对{}角色优化)\", 
+            id: format!("{}_optimized", base_personality.id),
+            name: format!("{}_优化版", base_personality.name),
+            description: format!("{} (针对{}角色优化)", 
                 base_personality.description, 
                 Self::get_role_name(&role.role_type)
             ),
@@ -375,15 +375,15 @@ impl PersonalityManager {
     /// 获取性格对应的发言风格
     pub fn get_speech_style_from_personality(personality: &AIPersonality) -> String {
         if personality.traits.logic > 0.7 {
-            \"逻辑分析型发言\".to_string()
+            "逻辑分析型发言".to_string()
         } else if personality.traits.aggressiveness > 0.7 {
-            \"激进攻击型发言\".to_string()
+            "激进攻击型发言".to_string()
         } else if personality.traits.deception > 0.6 {
-            \"巧妙欺骗型发言\".to_string()
+            "巧妙欺骗型发言".to_string()
         } else if personality.traits.trustfulness > 0.7 {
-            \"诚实信任型发言\".to_string()
+            "诚实信任型发言".to_string()
         } else {
-            \"平衡中性型发言\".to_string()
+            "平衡中性型发言".to_string()
         }
     }
     
@@ -405,23 +405,23 @@ impl PersonalityManager {
         let compatibility_score = 1.0 - avg_difference;
         
         let relationship_type = if compatibility_score > 0.8 {
-            \"高度兼容\"
+            "高度兼容"
         } else if compatibility_score > 0.6 {
-            \"适度兼容\"
+            "适度兼容"
         } else if compatibility_score > 0.4 {
-            \"低度兼容\"
+            "低度兼容"
         } else {
-            \"不兼容\"
+            "不兼容"
         };
         
         CompatibilityAnalysis {
             compatibility_score,
             relationship_type: relationship_type.to_string(),
             main_differences: vec![
-                format!(\"攻击性差异: {:.2}\", trait_differences.0),
-                format!(\"逻辑性差异: {:.2}\", trait_differences.1),
-                format!(\"欺骗性差异: {:.2}\", trait_differences.2),
-                format!(\"信任度差异: {:.2}\", trait_differences.3),
+                format!("攻击性差异: {:.2}", trait_differences.0),
+                format!("逻辑性差异: {:.2}", trait_differences.1),
+                format!("欺骗性差异: {:.2}", trait_differences.2),
+                format!("信任度差异: {:.2}", trait_differences.3),
             ],
         }
     }
@@ -435,12 +435,12 @@ impl PersonalityManager {
     /// 获取角色名称
     fn get_role_name(role_type: &crate::types::RoleType) -> &'static str {
         match role_type {
-            crate::types::RoleType::Werewolf => \"狼人\",
-            crate::types::RoleType::Villager => \"村民\",
-            crate::types::RoleType::Seer => \"预言家\",
-            crate::types::RoleType::Witch => \"女巫\",
-            crate::types::RoleType::Hunter => \"猎人\",
-            crate::types::RoleType::Guard => \"守卫\",
+            crate::types::RoleType::Werewolf => "狼人",
+            crate::types::RoleType::Villager => "村民",
+            crate::types::RoleType::Seer => "预言家",
+            crate::types::RoleType::Witch => "女巫",
+            crate::types::RoleType::Hunter => "猎人",
+            crate::types::RoleType::Guard => "守卫",
         }
     }
 }
@@ -458,7 +458,7 @@ pub fn create_personality_by_difficulty(difficulty: &str) -> AIPersonality {
     let templates = PersonalityManager::get_personality_templates();
     
     match difficulty {
-        \"easy\" => {
+        "easy" => {
             // 简单难度：逻辑较弱，容易被识破
             let mut personality = PersonalityManager::create_personality_from_template(
                 &templates[3], // 保守谨慎型
@@ -468,14 +468,14 @@ pub fn create_personality_by_difficulty(difficulty: &str) -> AIPersonality {
             personality.traits.deception = 0.2;
             personality
         }
-        \"normal\" => {
+        "normal" => {
             // 普通难度：平衡的AI
             PersonalityManager::create_personality_from_template(
                 &templates[0], // 逻辑分析型
                 0.2
             )
         }
-        \"hard\" => {
+        "hard" => {
             // 困难难度：高逻辑，善于欺骗
             let mut personality = PersonalityManager::create_personality_from_template(
                 &templates[2], // 狡猾欺骗型
@@ -485,7 +485,7 @@ pub fn create_personality_by_difficulty(difficulty: &str) -> AIPersonality {
             personality.traits.deception = 0.8;
             personality
         }
-        \"expert\" => {
+        "expert" => {
             // 专家难度：完美AI
             let mut personality = PersonalityManager::create_personality_from_template(
                 &templates[4], // 天生领袖

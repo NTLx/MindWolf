@@ -2,6 +2,7 @@ use crate::error::{AppError, AppResult};
 use crate::types::*;
 use crate::game_engine::GameEngine;
 use crate::llm::LLMManager;
+use crate::utils;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use log::{info, warn};
@@ -30,7 +31,7 @@ impl GameManager {
     
     /// 创建新游戏
     pub async fn create_game(&mut self, config: GameConfig) -> AppResult<GameState> {
-        info!(\"创建新游戏\");
+        info!("创建新游戏");
         
         let mut engine = GameEngine::new(config)?;
         engine.initialize_game()?;
@@ -47,10 +48,10 @@ impl GameManager {
         if let Some(engine) = &mut self.engine {
             engine.start_game()?;
             self.is_running = true;
-            info!(\"游戏已开始\");
+            info!("游戏已开始");
             Ok(())
         } else {
-            Err(AppError::GameLogic(\"游戏未创建\".to_string()))
+            Err(AppError::GameLogic("游戏未创建".to_string()))
         }
     }
     
@@ -58,7 +59,7 @@ impl GameManager {
     pub async fn end_game(&mut self) -> AppResult<()> {
         self.engine = None;
         self.is_running = false;
-        info!(\"游戏已结束\");
+        info!("游戏已结束");
         Ok(())
     }
     
@@ -79,7 +80,7 @@ impl GameManager {
             
             Ok(())
         } else {
-            Err(AppError::GameLogic(\"游戏未开始\".to_string()))
+            Err(AppError::GameLogic("游戏未开始".to_string()))
         }
     }
     
@@ -106,26 +107,35 @@ impl GameManager {
             
             Ok(())
         } else {
-            Err(AppError::GameLogic(\"游戏未开始\".to_string()))
+            Err(AppError::GameLogic("游戏未开始".to_string()))
         }
     }
     
     /// 执行夜晚行动
     async fn execute_night_actions(&mut self) -> AppResult<()> {
-        if let Some(engine) = &mut self.engine {
+        // 获取所有存活的AI玩家
+        let ai_players: Vec<Player> = if let Some(engine) = &self.engine {
             let state = engine.get_state();
-            
-            // 获取所有存活的AI玩家
-            let ai_players: Vec<_> = state.players.iter()
+            state.players.iter()
                 .filter(|p| p.is_alive && p.is_ai && p.role.has_night_action)
                 .cloned()
-                .collect();
-            
-            // 为每个AI生成夜晚行动
-            for player in ai_players {
-                if let Some(action) = self.generate_ai_night_action(&player).await? {
-                    engine.execute_night_action(action)?;
-                }
+                .collect()
+        } else {
+            return Ok(());
+        };
+        
+        // 为每个AI生成夜晚行动
+        let mut actions = Vec::new();
+        for player in ai_players {
+            if let Some(action) = self.generate_ai_night_action(&player).await? {
+                actions.push(action);
+            }
+        }
+        
+        // 执行所有夜晚行动
+        if let Some(engine) = &mut self.engine {
+            for action in actions {
+                engine.execute_night_action(action)?;
             }
         }
         
@@ -141,10 +151,10 @@ impl GameManager {
                 Ok(response) => {
                     // TODO: 解析LLM响应生成夜晚行动
                     // 这里简化处理，实际应该解析JSON响应
-                    self.parse_night_action_response(player, &response)
+                    self.parse_night_action_response(player, response.as_str())
                 }
                 Err(e) => {
-                    warn!(\"AI夜晚行动生成失败: {}\", e);
+                    warn!("AI夜晚行动生成失败: {}", e);
                     Ok(None)
                 }
             }
@@ -162,7 +172,7 @@ impl GameManager {
             let prompt = match player.role.role_type {
                 RoleType::Werewolf => {
                     format!(
-                        \"你是狼人{}，现在是第{}夜。存活的玩家有：{}。请选择一个目标杀死。返回JSON格式：{{\\\"action\\\":\\\"kill\\\",\\\"target\\\":\\\"player_id\\\"}}\",
+                        "你是狼人{}，现在是第{}夜。存活的玩家有：{}。请选择一个目标杀死。返回JSON格式：{{\"action\":\"kill\",\"target\":\"player_id\"}}",
                         player.name,
                         state.day,
                         self.format_alive_players(state)
@@ -170,7 +180,7 @@ impl GameManager {
                 }
                 RoleType::Seer => {
                     format!(
-                        \"你是预言家{}，现在是第{}夜。存活的玩家有：{}。请选择一个目标查验。返回JSON格式：{{\\\"action\\\":\\\"check\\\",\\\"target\\\":\\\"player_id\\\"}}\",
+                        "你是预言家{}，现在是第{}夜。存活的玩家有：{}。请选择一个目标查验。返回JSON格式：{{\"action\":\"check\",\"target\":\"player_id\"}}",
                         player.name,
                         state.day,
                         self.format_alive_players(state)
@@ -178,25 +188,25 @@ impl GameManager {
                 }
                 RoleType::Witch => {
                     format!(
-                        \"你是女巫{}，现在是第{}夜。你可以选择救人或毒人。返回JSON格式：{{\\\"action\\\":\\\"heal/poison\\\",\\\"target\\\":\\\"player_id\\\"}}\",
+                        "你是女巫{}，现在是第{}夜。你可以选择救人或毒人。返回JSON格式：{{\"action\":\"heal/poison\",\"target\":\"player_id\"}}",
                         player.name,
                         state.day
                     )
                 }
                 RoleType::Guard => {
                     format!(
-                        \"你是守卫{}，现在是第{}夜。存活的玩家有：{}。请选择一个目标保护。返回JSON格式：{{\\\"action\\\":\\\"protect\\\",\\\"target\\\":\\\"player_id\\\"}}\",
+                        "你是守卫{}，现在是第{}夜。存活的玩家有：{}。请选择一个目标保护。返回JSON格式：{{\"action\":\"protect\",\"target\":\"player_id\"}}",
                         player.name,
                         state.day,
                         self.format_alive_players(state)
                     )
                 }
-                _ => return Err(AppError::GameLogic(\"无效的夜晚行动角色\".to_string())),
+                _ => return Err(AppError::GameLogic("无效的夜晚行动角色".to_string())),
             };
             
             Ok(prompt)
         } else {
-            Err(AppError::GameLogic(\"游戏引擎未初始化\".to_string()))
+            Err(AppError::GameLogic("游戏引擎未初始化".to_string()))
         }
     }
     
@@ -204,9 +214,9 @@ impl GameManager {
     fn format_alive_players(&self, state: &GameState) -> String {
         state.players.iter()
             .filter(|p| p.is_alive)
-            .map(|p| format!(\"{}({})\", p.name, p.id))
+            .map(|p| format!("{}({})", p.name, p.id))
             .collect::<Vec<_>>()
-            .join(\", \")
+            .join(", ")
     }
     
     /// 解析夜晚行动响应
@@ -214,15 +224,15 @@ impl GameManager {
         // 简化的JSON解析
         if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(response) {
             if let (Some(action_str), target) = (
-                json_value.get(\"action\").and_then(|v| v.as_str()),
-                json_value.get(\"target\").and_then(|v| v.as_str())
+                json_value.get("action").and_then(|v| v.as_str()),
+                json_value.get("target").and_then(|v| v.as_str())
             ) {
                 let action_type = match action_str {
-                    \"kill\" => NightActionType::Kill,
-                    \"check\" => NightActionType::Check,
-                    \"heal\" => NightActionType::Heal,
-                    \"protect\" => NightActionType::Protect,
-                    \"poison\" => NightActionType::Poison,
+                    "kill" => NightActionType::Kill,
+                    "check" => NightActionType::Check,
+                    "heal" => NightActionType::Heal,
+                    "protect" => NightActionType::Protect,
+                    "poison" => NightActionType::Poison,
                     _ => return Ok(None),
                 };
                 
@@ -312,31 +322,31 @@ impl GameManager {
                             Ok(response)
                         }
                         Err(e) => {
-                            warn!(\"AI发言生成失败: {}\", e);
-                            Ok(\"我需要思考一下...\".to_string())
+                            warn!("AI发言生成失败: {}", e);
+                            Ok("我需要思考一下...".to_string())
                         }
                     }
                 } else {
-                    Err(AppError::GameLogic(\"玩家不存在\".to_string()))
+                    Err(AppError::GameLogic("玩家不存在".to_string()))
                 }
             } else {
-                Err(AppError::GameLogic(\"游戏未开始\".to_string()))
+                Err(AppError::GameLogic("游戏未开始".to_string()))
             }
         } else {
-            Ok(\"AI系统未配置\".to_string())
+            Ok("AI系统未配置".to_string())
         }
     }
     
     /// 构建发言提示词
     fn build_speech_prompt(&self, player: &Player, state: &GameState) -> AppResult<String> {
         let phase_desc = match state.phase {
-            GamePhase::DayDiscussion => \"白天讨论\",
-            GamePhase::Voting => \"投票阶段\",
-            _ => \"其他阶段\",
+            GamePhase::DayDiscussion => "白天讨论",
+            GamePhase::Voting => "投票阶段",
+            _ => "其他阶段",
         };
         
         let prompt = format!(
-            \"你是{}，身份是{}，属于{}阵营。现在是第{}天的{}阶段。场上存活玩家：{}。请生成一段符合你身份和性格的发言，长度在50-200字之间。\",
+            "你是{}，身份是{}，属于{}阵营。现在是第{}天的{}阶段。场上存活玩家：{}。请生成一段符合你身份和性格的发言，长度在50-200字之间。",
             player.name,
             utils::get_role_description(&player.role.role_type),
             utils::get_faction_description(&player.faction),
@@ -362,3 +372,4 @@ impl GameManager {
         self.is_running
     }
 }
+

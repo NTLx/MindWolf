@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::AppResult;
 use crate::types::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -211,7 +211,7 @@ impl ReplaySystem {
     }
 
     /// 开始记录游戏
-    pub fn start_recording(&mut self, game_id: String, config: GameConfig, players: Vec<Player>) -> Result<()> {
+    pub fn start_recording(&mut self, game_id: String, config: GameConfig, players: Vec<Player>) -> AppResult<()> {
         let replay = GameReplay {
             game_id: game_id.clone(),
             start_time: Utc::now(),
@@ -225,12 +225,12 @@ impl ReplaySystem {
         };
 
         self.replays.insert(game_id, replay);
-        log::info("开始记录游戏复盘数据");
+        log::info!("开始记录游戏复盘数据");
         Ok(())
     }
 
     /// 记录游戏事件
-    pub fn record_event(&mut self, game_id: &str, event: GameEvent) -> Result<()> {
+    pub fn record_event(&mut self, game_id: &str, event: GameEvent) -> AppResult<()> {
         if let Some(replay) = self.replays.get_mut(game_id) {
             replay.game_events.push(event);
         }
@@ -238,7 +238,7 @@ impl ReplaySystem {
     }
 
     /// 记录AI决策
-    pub fn record_ai_decision(&mut self, game_id: &str, decision: AIDecision) -> Result<()> {
+    pub fn record_ai_decision(&mut self, game_id: &str, decision: AIDecision) -> AppResult<()> {
         if let Some(replay) = self.replays.get_mut(game_id) {
             replay.ai_decisions.push(decision);
         }
@@ -246,7 +246,7 @@ impl ReplaySystem {
     }
 
     /// 结束游戏记录并分析
-    pub async fn finish_recording(&mut self, game_id: &str, result: GameResult) -> Result<()> {
+    pub async fn finish_recording(&mut self, game_id: &str, result: GameResult) -> AppResult<()> {
         if let Some(replay) = self.replays.get_mut(game_id) {
             replay.end_time = Some(Utc::now());
             replay.game_result = Some(result);
@@ -254,7 +254,7 @@ impl ReplaySystem {
             // 执行游戏分析
             replay.analysis = Some(self.analyzer.analyze_game(replay).await?);
             
-            log::info(&format!("游戏 {} 复盘记录完成", game_id));
+            log::info!("游戏 {} 复盘记录完成", game_id);
         }
         Ok(())
     }
@@ -278,7 +278,7 @@ impl ReplaySystem {
     }
 
     /// 导出复盘数据
-    pub fn export_replay(&self, game_id: &str, format: ExportFormat) -> Result<Vec<u8>> {
+    pub fn export_replay(&self, game_id: &str, format: ExportFormat) -> AppResult<Vec<u8>> {
         if let Some(replay) = self.replays.get(game_id) {
             match format {
                 ExportFormat::Json => {
@@ -300,9 +300,9 @@ impl ReplaySystem {
     }
 
     /// 删除复盘
-    pub fn delete_replay(&mut self, game_id: &str) -> Result<()> {
+    pub fn delete_replay(&mut self, game_id: &str) -> AppResult<()> {
         self.replays.remove(game_id);
-        log::info(&format!("已删除游戏复盘: {}", game_id));
+        log::info!("已删除游戏复盘: {}", game_id);
         Ok(())
     }
 
@@ -353,7 +353,7 @@ impl ReplaySystem {
         true
     }
 
-    fn export_to_csv(&self, replay: &GameReplay) -> Result<Vec<u8>> {
+    fn export_to_csv(&self, replay: &GameReplay) -> AppResult<Vec<u8>> {
         let mut csv_content = String::new();
         
         // CSV头部
@@ -376,7 +376,7 @@ impl ReplaySystem {
         Ok(csv_content.into_bytes())
     }
 
-    fn export_to_html(&self, replay: &GameReplay) -> Result<Vec<u8>> {
+    fn export_to_html(&self, replay: &GameReplay) -> AppResult<Vec<u8>> {
         let mut html = String::new();
         
         html.push_str("<!DOCTYPE html><html><head><title>游戏复盘报告</title>");
@@ -458,8 +458,8 @@ impl GameAnalyzer {
     }
 
     /// 分析游戏
-    pub async fn analyze_game(&self, replay: &GameReplay) -> Result<GameAnalysis> {
-        log::info("开始分析游戏数据...");
+    pub async fn analyze_game(&self, replay: &GameReplay) -> AppResult<GameAnalysis> {
+        log::info!("开始分析游戏数据...");
 
         let winner_analysis = self.analyze_winner(replay).await?;
         let player_performance = self.analyze_player_performance(replay).await?;
@@ -479,7 +479,7 @@ impl GameAnalyzer {
     }
 
     /// 分析获胜原因
-    async fn analyze_winner(&self, replay: &GameReplay) -> Result<WinnerAnalysis> {
+    async fn analyze_winner(&self, replay: &GameReplay) -> AppResult<WinnerAnalysis> {
         // 实现获胜分析逻辑
         Ok(WinnerAnalysis {
             winning_faction: replay.game_result.as_ref().unwrap().winner.clone(),
@@ -490,7 +490,7 @@ impl GameAnalyzer {
     }
 
     /// 分析玩家表现
-    async fn analyze_player_performance(&self, replay: &GameReplay) -> Result<HashMap<String, PlayerPerformance>> {
+    async fn analyze_player_performance(&self, replay: &GameReplay) -> AppResult<HashMap<String, PlayerPerformance>> {
         let mut performance = HashMap::new();
         
         for player in &replay.players {
@@ -515,19 +515,19 @@ impl GameAnalyzer {
     }
 
     /// 识别转折点
-    async fn identify_turning_points(&self, replay: &GameReplay) -> Result<Vec<TurningPoint>> {
+    async fn identify_turning_points(&self, replay: &GameReplay) -> AppResult<Vec<TurningPoint>> {
         // 实现转折点识别逻辑
         Ok(vec![])
     }
 
     /// 提取策略洞察
-    async fn extract_strategic_insights(&self, replay: &GameReplay) -> Result<Vec<StrategicInsight>> {
+    async fn extract_strategic_insights(&self, replay: &GameReplay) -> AppResult<Vec<StrategicInsight>> {
         // 实现策略洞察提取逻辑
         Ok(vec![])
     }
 
     /// 计算AI性能指标
-    async fn calculate_ai_metrics(&self, replay: &GameReplay) -> Result<AIPerformanceMetrics> {
+    async fn calculate_ai_metrics(&self, replay: &GameReplay) -> AppResult<AIPerformanceMetrics> {
         let decisions = &replay.ai_decisions;
         
         let average_response_time = if !decisions.is_empty() {
@@ -554,7 +554,7 @@ impl GameAnalyzer {
     }
 
     /// 计算游戏统计数据
-    async fn calculate_game_statistics(&self, replay: &GameReplay) -> Result<GameStatistics> {
+    async fn calculate_game_statistics(&self, replay: &GameReplay) -> AppResult<GameStatistics> {
         let events = &replay.game_events;
         
         let total_rounds = events.iter()
@@ -673,3 +673,4 @@ mod tests {
         assert_eq!(analysis.winner_analysis.winning_faction, Faction::Village);
     }
 }
+

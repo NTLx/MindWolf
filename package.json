@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:portable": "vue-tsc --noEmit && vite build && tauri build --target x86_64-pc-windows-msvc",
+    "clean": "rm -rf dist src-tauri/target"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

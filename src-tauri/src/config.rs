@@ -38,8 +38,8 @@ impl Default for AppConfig {
             llm: LLMConfig {
                 provider: LLMProvider::OpenAI,
                 api_key: String::new(),
-                base_url: \"https://api.openai.com\".to_string(),
-                model: \"gpt-4\".to_string(),
+                base_url: "https://api.openai.com".to_string(),
+                model: "gpt-4".to_string(),
                 max_tokens: 2000,
                 temperature: 0.7,
                 timeout: 60,
@@ -60,8 +60,8 @@ impl Default for AppConfig {
             app: GeneralConfig {
                 auto_save_replay: true,
                 show_ai_thinking: true,
-                theme: \"auto\".to_string(),
-                language: \"zh-CN\".to_string(),
+                theme: "auto".to_string(),
+                language: "zh-CN".to_string(),
             },
         }
     }
@@ -88,17 +88,17 @@ impl ConfigManager {
     /// 获取配置文件路径
     fn get_config_path() -> AppResult<PathBuf> {
         let mut path = dirs::config_dir()
-            .ok_or_else(|| AppError::Config(\"无法获取配置目录\".to_string()))?;
+            .ok_or_else(|| AppError::Config("无法获取配置目录".to_string()))?;
         
-        path.push(\"MindWolf\");
+        path.push("MindWolf");
         
         // 确保目录存在
         if !path.exists() {
             std::fs::create_dir_all(&path)
-                .map_err(|e| AppError::Config(format!(\"创建配置目录失败: {}\", e)))?;
+                .map_err(|e| AppError::Config(format!("创建配置目录失败: {}", e)))?;
         }
         
-        path.push(\"config.json\");
+        path.push("config.json");
         Ok(path)
     }
     
@@ -106,23 +106,23 @@ impl ConfigManager {
     fn load_or_create_config(config_path: &PathBuf) -> AppResult<AppConfig> {
         if config_path.exists() {
             let content = std::fs::read_to_string(config_path)
-                .map_err(|e| AppError::Config(format!(\"读取配置文件失败: {}\", e)))?;
+                .map_err(|e| AppError::Config(format!("读取配置文件失败: {}", e)))?;
             
             let config: AppConfig = serde_json::from_str(&content)
-                .map_err(|e| AppError::Config(format!(\"解析配置文件失败: {}\", e)))?;
+                .map_err(|e| AppError::Config(format!("解析配置文件失败: {}", e)))?;
             
-            info!(\"已加载配置文件: {:?}\", config_path);
+            info!("已加载配置文件: {:?}", config_path);
             Ok(config)
         } else {
             let config = AppConfig::default();
             
             let content = serde_json::to_string_pretty(&config)
-                .map_err(|e| AppError::Config(format!(\"序列化默认配置失败: {}\", e)))?;
+                .map_err(|e| AppError::Config(format!("序列化默认配置失败: {}", e)))?;
             
             std::fs::write(config_path, content)
-                .map_err(|e| AppError::Config(format!(\"写入默认配置失败: {}\", e)))?;
+                .map_err(|e| AppError::Config(format!("写入默认配置失败: {}", e)))?;
             
-            info!(\"已创建默认配置文件: {:?}\", config_path);
+            info!("已创建默认配置文件: {:?}", config_path);
             Ok(config)
         }
     }
@@ -153,12 +153,12 @@ impl ConfigManager {
     /// 保存配置
     async fn save_config(&self) -> AppResult<()> {
         let content = serde_json::to_string_pretty(&self.config)
-            .map_err(|e| AppError::Config(format!(\"序列化配置失败: {}\", e)))?;
+            .map_err(|e| AppError::Config(format!("序列化配置失败: {}", e)))?;
         
         fs::write(&self.config_path, content).await
-            .map_err(|e| AppError::Config(format!(\"保存配置失败: {}\", e)))?;
+            .map_err(|e| AppError::Config(format!("保存配置失败: {}", e)))?;
         
-        info!(\"配置已保存: {:?}\", self.config_path);
+        info!("配置已保存: {:?}", self.config_path);
         Ok(())
     }
     
@@ -171,13 +171,13 @@ impl ConfigManager {
     /// 导出配置
     pub fn export_config(&self) -> AppResult<String> {
         serde_json::to_string_pretty(&self.config)
-            .map_err(|e| AppError::Config(format!(\"导出配置失败: {}\", e)))
+            .map_err(|e| AppError::Config(format!("导出配置失败: {}", e)))
     }
     
     /// 导入配置
     pub async fn import_config(&mut self, config_json: &str) -> AppResult<()> {
         let config: AppConfig = serde_json::from_str(config_json)
-            .map_err(|e| AppError::Config(format!(\"解析导入配置失败: {}\", e)))?;
+            .map_err(|e| AppError::Config(format!("解析导入配置失败: {}", e)))?;
         
         self.config = config;
         self.save_config().await

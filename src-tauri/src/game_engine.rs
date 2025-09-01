@@ -1,6 +1,6 @@
-use crate::error::{AppError, AppResult};
 use crate::types::*;
 use crate::utils;
+use crate::error::{AppError, AppResult};
 use std::collections::HashMap;
 use chrono::Utc;
 use log::{info, warn, error};
@@ -37,7 +37,7 @@ impl GameEngine {
     
     /// 初始化游戏
     pub fn initialize_game(&mut self) -> AppResult<()> {
-        info!(\"初始化游戏，玩家数: {}\", self.state.game_config.total_players);
+        info!("初始化游戏，玩家数: {}", self.state.game_config.total_players);
         
         // 生成角色分配
         let role_distribution = utils::generate_role_distribution(self.state.game_config.total_players);
@@ -60,8 +60,8 @@ impl GameEngine {
         // 添加人类玩家（第一个玩家）
         if let Some(role) = roles.pop() {
             let human_player = Player {
-                id: \"human_player\".to_string(),
-                name: \"玩家\".to_string(),
+                id: "human_player".to_string(),
+                name: "玩家".to_string(),
                 role,
                 faction: Faction::Villager, // 将在角色分配后更新
                 is_alive: true,
@@ -74,7 +74,7 @@ impl GameEngine {
         // 添加AI玩家
         for (i, role) in roles.into_iter().enumerate() {
             let ai_player = Player {
-                id: format!(\"ai_{}\", i + 1),
+                id: format!("ai_{}", i + 1),
                 name: utils::generate_ai_name(),
                 role: role.clone(),
                 faction: role.faction.clone(),
@@ -97,7 +97,7 @@ impl GameEngine {
         
         self.state.players = players;
         
-        info!(\"游戏初始化完成，共 {} 名玩家\", self.state.players.len());
+        info!("游戏初始化完成，共 {} 名玩家", self.state.players.len());
         Ok(())
     }
     
@@ -132,8 +132,8 @@ impl GameEngine {
         
         AIPersonality {
             id: utils::generate_id(),
-            name: \"标准AI\".to_string(),
-            description: \"平衡型AI，具备适中的各项能力\".to_string(),
+            name: "标准AI".to_string(),
+            description: "平衡型AI，具备适中的各项能力".to_string(),
             traits: PersonalityTraits {
                 aggressiveness: rng.gen_range(0.3..0.8),
                 logic: rng.gen_range(0.5..0.9),
@@ -146,13 +146,13 @@ impl GameEngine {
     /// 开始游戏
     pub fn start_game(&mut self) -> AppResult<()> {
         if self.state.players.is_empty() {
-            return Err(AppError::GameLogic(\"没有玩家，无法开始游戏\".to_string()));
+            return Err(AppError::GameLogic("没有玩家，无法开始游戏".to_string()));
         }
         
         self.state.phase = GamePhase::Night;
         self.state.day = 1;
         
-        info!(\"游戏开始！第1夜\");
+        info!("游戏开始！第1夜");
         self.start_phase_timer()
     }
     
@@ -164,12 +164,12 @@ impl GameEngine {
             }
             GamePhase::Night => {
                 self.state.phase = GamePhase::DayDiscussion;
-                info!(\"进入白天讨论阶段\");
+                info!("进入白天讨论阶段");
                 self.start_phase_timer()?;
             }
             GamePhase::DayDiscussion => {
                 self.state.phase = GamePhase::Voting;
-                info!(\"进入投票阶段\");
+                info!("进入投票阶段");
                 self.start_phase_timer()?;
             }
             GamePhase::Voting => {
@@ -179,16 +179,16 @@ impl GameEngine {
                 } else {
                     self.state.phase = GamePhase::Night;
                     self.state.day += 1;
-                    info!(\"进入第{}夜\", self.state.day);
+                    info!("进入第{}夜", self.state.day);
                 }
             }
             GamePhase::LastWords => {
                 self.state.phase = GamePhase::Night;
                 self.state.day += 1;
-                info!(\"进入第{}夜\", self.state.day);
+                info!("进入第{}夜", self.state.day);
             }
             GamePhase::GameOver => {
-                info!(\"游戏已结束\");
+                info!("游戏已结束");
                 return Ok(());
             }
         }
@@ -248,12 +248,12 @@ impl GameEngine {
                     }
                 }
                 
-                info!(\"玩家 {} 被淘汰\", player.name);
+                info!("玩家 {} 被淘汰", player.name);
                 
                 // 检查猎人技能
                 if player.role.role_type == RoleType::Hunter {
                     // TODO: 实现猎人技能
-                    info!(\"猎人 {} 可以开枪带走一名玩家\", player.name);
+                    info!("猎人 {} 可以开枪带走一名玩家", player.name);
                 }
             }
         }
@@ -275,7 +275,7 @@ impl GameEngine {
             self.state.winner = Some(winner.clone());
             self.state.phase = GamePhase::GameOver;
             
-            info!(\"游戏结束！获胜方: {:?}\", winner);
+            info!("游戏结束！获胜方: {:?}", winner);
             return Ok(true);
         }
         
@@ -285,17 +285,17 @@ impl GameEngine {
     /// 投票
     pub fn vote(&mut self, voter_id: String, target_id: String) -> AppResult<()> {
         if self.state.phase != GamePhase::Voting {
-            return Err(AppError::GameLogic(\"当前不是投票阶段\".to_string()));
+            return Err(AppError::GameLogic("当前不是投票阶段".to_string()));
         }
         
         // 检查投票者是否存在且存活
         if !self.is_player_alive(&voter_id) {
-            return Err(AppError::GameLogic(\"投票者不存在或已死亡\".to_string()));
+            return Err(AppError::GameLogic("投票者不存在或已死亡".to_string()));
         }
         
         // 检查目标是否存在且存活
         if !self.is_player_alive(&target_id) {
-            return Err(AppError::GameLogic(\"投票目标不存在或已死亡\".to_string()));
+            return Err(AppError::GameLogic("投票目标不存在或已死亡".to_string()));
         }
         
         // 移除之前的投票（如果有）
@@ -336,7 +336,7 @@ impl GameEngine {
             if elapsed >= time_remaining {
                 self.state.time_remaining = None;
                 self.timer = None;
-                info!(\"阶段时间已到\");
+                info!("阶段时间已到");
                 return Ok(true); // 时间到了
             } else {
                 self.state.time_remaining = Some(time_remaining - elapsed);
@@ -349,7 +349,7 @@ impl GameEngine {
     /// 添加聊天消息
     pub fn add_chat_message(&mut self, message: ChatMessage) -> AppResult<()> {
         // TODO: 存储聊天消息到某个地方
-        info!(\"聊天消息: {} - {}\", message.sender, message.content);
+        info!("聊天消息: {} - {}", message.sender, message.content);
         Ok(())
     }
     
@@ -363,22 +363,24 @@ impl GameEngine {
             }
             NightActionType::Check => {
                 // TODO: 实现预言家查验
-                info!(\"预言家查验: {:?}\", action.target);
+                info!("预言家查验: {:?}", action.target);
             }
             NightActionType::Heal => {
                 // TODO: 实现女巫救人
-                info!(\"女巫救人: {:?}\", action.target);
+                info!("女巫救人: {:?}", action.target);
             }
             NightActionType::Protect => {
                 // TODO: 实现守卫保护
-                info!(\"守卫保护: {:?}\", action.target);
+                info!("守卫保护: {:?}", action.target);
             }
             NightActionType::Poison => {
                 // TODO: 实现女巫毒人
-                info!(\"女巫毒人: {:?}\", action.target);
+                info!("女巫毒人: {:?}", action.target);
             }
         }
         
         Ok(())
     }
+    
+
 }

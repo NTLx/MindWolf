@@ -1,5 +1,6 @@
 use crate::types::*;
 use crate::error::{AppError, AppResult};
+use crate::types::*;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use log::{info, warn, debug};
@@ -117,7 +118,7 @@ impl ReasoningEngine {
             self.nodes.insert(player.id.clone(), node);
         }
         
-        info!(\"推理引擎已初始化，共{}个节点\", self.nodes.len());
+        info!("推理引擎已初始化，共{}个节点", self.nodes.len());
     }
     
     /// 添加证据并更新推理
@@ -125,7 +126,7 @@ impl ReasoningEngine {
         if let Some(node) = self.nodes.get_mut(&player_id) {
             node.evidence.push(evidence.clone());
             self.update_probabilities(&player_id, &evidence)?;
-            debug!(\"为玩家{}添加证据: {:?}\", player_id, evidence.evidence_type);
+            debug!("为玩家{}添加证据: {:?}", player_id, evidence.evidence_type);
         }
         Ok(())
     }
@@ -175,8 +176,8 @@ impl ReasoningEngine {
         let evidence = Evidence {
             evidence_type: EvidenceType::VotingPattern,
             confidence: 0.8,
-            source: \"voting_analysis\".to_string(),
-            description: format!(\"{}投票给{}\", voter_id, target_id),
+            source: "voting_analysis".to_string(),
+            description: format!("{}投票给{}", voter_id, target_id),
             weight: 0.3,
         };
         
@@ -195,8 +196,8 @@ impl ReasoningEngine {
         let evidence = Evidence {
             evidence_type: EvidenceType::SpeechAnalysis,
             confidence: analysis.confidence,
-            source: \"speech_analysis\".to_string(),
-            description: format!(\"发言分析: {}\", analysis.summary),
+            source: "speech_analysis".to_string(),
+            description: format!("发言分析: {}", analysis.summary),
             weight: analysis.suspicion_weight,
         };
         
@@ -207,31 +208,31 @@ impl ReasoningEngine {
     /// 执行发言分析
     fn perform_speech_analysis(&self, content: &str) -> SpeechAnalysisResult {
         let content_lower = content.to_lowercase();
-        let mut suspicion_weight = 0.0;
-        let mut confidence = 0.5;
+        let mut suspicion_weight: f32 = 0.0;
+        let mut confidence: f32 = 0.5;
         let mut summary = String::new();
         
         // 检查可疑关键词
         let suspicious_keywords = [
-            \"一定是\", \"肯定是\", \"我觉得不是\", \"太明显了\",
-            \"这么简单\", \"显而易见\", \"不可能\", \"绝对\"
+            "一定是", "肯定是", "我觉得不是", "太明显了",
+            "这么简单", "显而易见", "不可能", "绝对"
         ];
         
         let defensive_keywords = [
-            \"我不是\", \"相信我\", \"为什么怀疑我\", \"我是好人\",
-            \"你们错了\", \"冤枉\", \"诬陷\"
+            "我不是", "相信我", "为什么怀疑我", "我是好人",
+            "你们错了", "冤枉", "诬陷"
         ];
         
         let aggressive_keywords = [
-            \"一定是狼\", \"明显的狼\", \"狼人\", \"出他\",
-            \"投他\", \"他有问题\"
+            "一定是狼", "明显的狼", "狼人", "出他",
+            "投他", "他有问题"
         ];
         
         // 检查可疑关键词
         for keyword in &suspicious_keywords {
             if content_lower.contains(keyword) {
                 suspicion_weight += 0.1;
-                summary.push_str(&format!(\"包含可疑词汇: {}; \", keyword));
+                summary.push_str(&format!("包含可疑词汇: {}; ", keyword));
             }
         }
         
@@ -240,7 +241,7 @@ impl ReasoningEngine {
             if content_lower.contains(keyword) {
                 suspicion_weight += 0.2;
                 confidence += 0.1;
-                summary.push_str(&format!(\"防御性发言: {}; \", keyword));
+                summary.push_str(&format!("防御性发言: {}; ", keyword));
             }
         }
         
@@ -248,24 +249,24 @@ impl ReasoningEngine {
         for keyword in &aggressive_keywords {
             if content_lower.contains(keyword) {
                 suspicion_weight += 0.05;
-                summary.push_str(&format!(\"攻击性发言: {}; \", keyword));
+                summary.push_str(&format!("攻击性发言: {}; ", keyword));
             }
         }
         
         // 分析发言长度
         if content.len() > 200 {
             suspicion_weight += 0.05;
-            summary.push_str(\"发言较长，可能过度解释; \");
+            summary.push_str("发言较长，可能过度解释; ");
         } else if content.len() < 20 {
             suspicion_weight += 0.1;
-            summary.push_str(\"发言过短，可能隐藏信息; \");
+            summary.push_str("发言过短，可能隐藏信息; ");
         }
         
         SpeechAnalysisResult {
             suspicion_weight: suspicion_weight.clamp(0.0, 1.0),
             confidence: confidence.clamp(0.0, 1.0),
             summary: if summary.is_empty() {
-                \"正常发言\".to_string()
+                "正常发言".to_string()
             } else {
                 summary
             },
@@ -393,13 +394,13 @@ impl ReasoningEngine {
     fn create_default_rules() -> Vec<ReasoningRule> {
         vec![
             ReasoningRule {
-                name: \"连续防御规则\".to_string(),
+                name: "连续防御规则".to_string(),
                 condition: RuleCondition::SpeechContainsKeywords {
-                    player: \"any\".to_string(),
-                    keywords: vec![\"我不是\".to_string(), \"相信我\".to_string()],
+                    player: "any".to_string(),
+                    keywords: vec!["我不是".to_string(), "相信我".to_string()],
                 },
                 conclusion: RuleConclusion::IncreaseSuspicion {
-                    player: \"self\".to_string(),
+                    player: "self".to_string(),
                     amount: 0.2,
                 },
                 confidence: 0.8,
@@ -407,6 +408,8 @@ impl ReasoningEngine {
             // 可以添加更多规则
         ]
     }
+    
+
 }
 
 /// 发言分析结果

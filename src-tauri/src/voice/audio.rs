@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::AppResult;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -63,8 +63,8 @@ impl AudioManager {
     }
 
     /// 初始化音频系统
-    pub async fn initialize(&self) -> Result<()> {
-        log::info("正在初始化音频系统...");
+    pub async fn initialize(&self) -> AppResult<()> {
+        log::info!("正在初始化音频系统...");
         
         // 扫描音频设备
         self.scan_devices().await?;
@@ -72,12 +72,12 @@ impl AudioManager {
         // 设置默认设备
         self.setup_default_devices().await?;
         
-        log::info("音频系统初始化完成");
+        log::info!("音频系统初始化完成");
         Ok(())
     }
 
     /// 扫描可用的音频设备
-    pub async fn scan_devices(&self) -> Result<()> {
+    pub async fn scan_devices(&self) -> AppResult<()> {
         let mut devices = self.devices.lock().await;
         devices.clear();
         
@@ -101,18 +101,18 @@ impl AudioManager {
             channels: vec![1, 2],
         });
         
-        log::info(&format!("扫描到 {} 个音频设备", devices.len()));
+        log::info!("扫描到 {} 个音频设备", devices.len());
         Ok(())
     }
 
     /// 获取音频设备列表
-    pub async fn get_devices(&self) -> Result<Vec<AudioDevice>> {
+    pub async fn get_devices(&self) -> AppResult<Vec<AudioDevice>> {
         let devices = self.devices.lock().await;
         Ok(devices.clone())
     }
 
     /// 设置默认音频设备
-    async fn setup_default_devices(&self) -> Result<()> {
+    async fn setup_default_devices(&self) -> AppResult<()> {
         let devices = self.devices.lock().await;
         let mut settings = self.settings.lock().await;
         
@@ -130,14 +130,14 @@ impl AudioManager {
     }
 
     /// 开始录音
-    pub async fn start_recording(&self) -> Result<()> {
+    pub async fn start_recording(&self) -> AppResult<()> {
         let mut is_recording = self.is_recording.lock().await;
         if *is_recording {
             return Ok(());
         }
         
         let settings = self.settings.lock().await;
-        log::info(&format!("开始录音，设备: {:?}", settings.input_device));
+        log::info!("开始录音，设备: {:?}", settings.input_device);
         
         // 在实际实现中，这里会启动音频录制流
         // 使用 cpal 或其他音频库来捕获音频数据
@@ -147,29 +147,29 @@ impl AudioManager {
     }
 
     /// 停止录音
-    pub async fn stop_recording(&self) -> Result<Vec<u8>> {
+    pub async fn stop_recording(&self) -> AppResult<Vec<u8>> {
         let mut is_recording = self.is_recording.lock().await;
         if !*is_recording {
             return Ok(Vec::new());
         }
         
         *is_recording = false;
-        log::info("停止录音");
+        log::info!("停止录音");
         
         // 在实际实现中，这里会返回录制的音频数据
         Ok(Vec::new())
     }
 
     /// 播放音频数据
-    pub async fn play_audio(&self, audio_data: Vec<u8>) -> Result<()> {
+    pub async fn play_audio(&self, audio_data: Vec<u8>) -> AppResult<()> {
         let mut is_playing = self.is_playing.lock().await;
         if *is_playing {
-            log::warn("音频播放中，跳过新的播放请求");
+            log::warn!("音频播放中，跳过新的播放请求");
             return Ok(());
         }
         
         let settings = self.settings.lock().await;
-        log::info(&format!("开始播放音频，设备: {:?}", settings.output_device));
+        log::info!("开始播放音频，设备: {:?}", settings.output_device);
         
         *is_playing = true;
         
@@ -180,20 +180,20 @@ impl AudioManager {
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
         *is_playing = false;
         
-        log::info("音频播放完成");
+        log::info!("音频播放完成");
         Ok(())
     }
 
     /// 设置音频参数
-    pub async fn set_settings(&self, new_settings: AudioSettings) -> Result<()> {
+    pub async fn set_settings(&self, new_settings: AudioSettings) -> AppResult<()> {
         let mut settings = self.settings.lock().await;
         *settings = new_settings;
-        log::info("音频设置已更新");
+        log::info!("音频设置已更新");
         Ok(())
     }
 
     /// 获取当前音频设置
-    pub async fn get_settings(&self) -> Result<AudioSettings> {
+    pub async fn get_settings(&self) -> AppResult<AudioSettings> {
         let settings = self.settings.lock().await;
         Ok(settings.clone())
     }
@@ -209,7 +209,7 @@ impl AudioManager {
     }
 
     /// 设置音频输入回调
-    pub async fn set_audio_callback<F>(&self, id: String, callback: F) -> Result<()>
+    pub async fn set_audio_callback<F>(&self, id: String, callback: F) -> AppResult<()>
     where
         F: Fn(Vec<f32>) + Send + Sync + 'static,
     {
@@ -219,59 +219,59 @@ impl AudioManager {
     }
 
     /// 移除音频回调
-    pub async fn remove_audio_callback(&self, id: &str) -> Result<()> {
+    pub async fn remove_audio_callback(&self, id: &str) -> AppResult<()> {
         let mut callbacks = self.callbacks.lock().await;
         callbacks.remove(id);
         Ok(())
     }
 
     /// 获取音频级别（音量）
-    pub async fn get_input_level(&self) -> Result<f32> {
+    pub async fn get_input_level(&self) -> AppResult<f32> {
         // 在实际实现中，这里会返回当前输入的音频级别
         // 用于显示麦克风音量指示器
         Ok(0.5) // 模拟返回50%的音量级别
     }
 
     /// 设置输出音量
-    pub async fn set_output_volume(&self, volume: f32) -> Result<()> {
+    pub async fn set_output_volume(&self, volume: f32) -> AppResult<()> {
         let mut settings = self.settings.lock().await;
         settings.volume = volume.clamp(0.0, 1.0);
-        log::info(&format!("输出音量设置为: {:.1}%", settings.volume * 100.0));
+        log::info!("输出音量设置为: {:.1}%", settings.volume * 100.0);
         Ok(())
     }
 
     /// 获取输出音量
-    pub async fn get_output_volume(&self) -> Result<f32> {
+    pub async fn get_output_volume(&self) -> AppResult<f32> {
         let settings = self.settings.lock().await;
         Ok(settings.volume)
     }
 
     /// 启用/禁用噪音抑制
-    pub async fn set_noise_reduction(&self, enabled: bool) -> Result<()> {
+    pub async fn set_noise_reduction(&self, enabled: bool) -> AppResult<()> {
         let mut settings = self.settings.lock().await;
         settings.noise_reduction = enabled;
-        log::info(&format!("噪音抑制: {}", if enabled { "开启" } else { "关闭" }));
+        log::info!("噪音抑制: {}", if enabled { "开启" } else { "关闭" });
         Ok(())
     }
 
     /// 启用/禁用自动增益控制
-    pub async fn set_auto_gain_control(&self, enabled: bool) -> Result<()> {
+    pub async fn set_auto_gain_control(&self, enabled: bool) -> AppResult<()> {
         let mut settings = self.settings.lock().await;
         settings.auto_gain_control = enabled;
-        log::info(&format!("自动增益控制: {}", if enabled { "开启" } else { "关闭" }));
+        log::info!("自动增益控制: {}", if enabled { "开启" } else { "关闭" });
         Ok(())
     }
 
     /// 音频格式转换
-    pub fn convert_audio_format(&self, data: Vec<u8>, from_rate: u32, to_rate: u32) -> Result<Vec<u8>> {
+    pub fn convert_audio_format(&self, data: Vec<u8>, from_rate: u32, to_rate: u32) -> AppResult<Vec<u8>> {
         // 在实际实现中，这里会进行音频格式转换
         // 包括采样率转换、声道转换等
-        log::info(&format!("音频格式转换: {}Hz -> {}Hz", from_rate, to_rate));
+        log::info!("音频格式转换: {}Hz -> {}Hz", from_rate, to_rate);
         Ok(data)
     }
 
     /// 应用音频滤波器
-    pub fn apply_audio_filters(&self, data: Vec<f32>, settings: &AudioSettings) -> Result<Vec<f32>> {
+    pub fn apply_audio_filters(&self, data: Vec<f32>, settings: &AudioSettings) -> AppResult<Vec<f32>> {
         let mut filtered_data = data;
         
         // 应用噪音抑制
@@ -288,7 +288,7 @@ impl AudioManager {
     }
 
     /// 应用噪音抑制算法
-    fn apply_noise_reduction(&self, data: Vec<f32>) -> Result<Vec<f32>> {
+    fn apply_noise_reduction(&self, data: Vec<f32>) -> AppResult<Vec<f32>> {
         // 简单的噪音门限实现
         let threshold = 0.01; // 噪音门限
         let processed_data: Vec<f32> = data.iter()
@@ -305,7 +305,7 @@ impl AudioManager {
     }
 
     /// 应用自动增益控制
-    fn apply_auto_gain_control(&self, data: Vec<f32>) -> Result<Vec<f32>> {
+    fn apply_auto_gain_control(&self, data: Vec<f32>) -> AppResult<Vec<f32>> {
         if data.is_empty() {
             return Ok(data);
         }
@@ -332,7 +332,7 @@ impl AudioManager {
     }
 
     /// 关闭音频管理器
-    pub async fn shutdown(&self) -> Result<()> {
+    pub async fn shutdown(&self) -> AppResult<()> {
         // 停止所有音频操作
         if self.is_recording().await {
             self.stop_recording().await?;
@@ -342,7 +342,7 @@ impl AudioManager {
         let mut callbacks = self.callbacks.lock().await;
         callbacks.clear();
         
-        log::info("音频管理器已关闭");
+        log::info!("音频管理器已关闭");
         Ok(())
     }
 }
@@ -480,3 +480,4 @@ mod tests {
         assert!((max_val - 1.0).abs() < 1e-6);
     }
 }
+

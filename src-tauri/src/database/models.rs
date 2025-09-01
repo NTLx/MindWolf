@@ -110,4 +110,4 @@ pub struct PlayerStatistics {
     pub favorite_roles: Vec<(String, u32)>,
     pub average_speeches_per_game: f32,
     pub survival_rate: f32,
-}"
+}

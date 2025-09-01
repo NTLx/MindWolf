@@ -2,6 +2,7 @@ use crate::types::*;
 use crate::error::{AppError, AppResult};
 use crate::ai::{reasoning::ReasoningEngine, strategy::StrategyEngine, nlp::NLPProcessor};
 use crate::llm::LLMManager;
+use crate::types::*;
 use std::sync::Arc;
 use log::{info, warn, debug};
 
@@ -24,7 +25,7 @@ pub struct AIMemory {
     pub suspicion_scores: std::collections::HashMap<String, f32>,
     pub voting_history: Vec<VoteRecord>,
     pub speech_history: Vec<SpeechMemory>,
-    pub night_action_history: Vec<NightActionMemory>,
+    pub night_action_history: Vec<crate::types::NightActionMemory>,
 }
 
 /// 发言记忆
@@ -37,13 +38,7 @@ pub struct SpeechMemory {
     pub my_reaction: String,
 }
 
-/// 夜晚行动记忆
-#[derive(Debug, Clone)]
-pub struct NightActionMemory {
-    pub night: u32,
-    pub my_action: Option<NightAction>,
-    pub observed_results: Vec<String>,
-}
+
 
 /// AI决策结果
 #[derive(Debug, Clone)]
@@ -60,6 +55,19 @@ pub enum DecisionType {
     NightAction,
     Speech,
     ClaimRole,
+}
+
+impl AIMemory {
+    fn new() -> Self {
+        Self {
+            known_roles: std::collections::HashMap::new(),
+            trust_scores: std::collections::HashMap::new(),
+            suspicion_scores: std::collections::HashMap::new(),
+            voting_history: Vec::new(),
+            speech_history: Vec::new(),
+            night_action_history: Vec::new(),
+        }
+    }
 }
 
 impl AIAgent {
@@ -97,13 +105,13 @@ impl AIAgent {
             }
         }
         
-        info!(\"AI代理 {} 已初始化\", self.player_id);
+        info!("AI代理 {} 已初始化", self.player_id);
         Ok(())
     }
     
     /// 决定夜晚行动
     pub async fn decide_night_action(&mut self, game_state: &GameState) -> AppResult<Option<NightAction>> {
-        debug!(\"AI {} 正在决定夜晚行动\", self.player_id);
+        debug!("AI {} 正在决定夜晚行动", self.player_id);
         
         // 更新推理状态
         self.update_reasoning(game_state)?;
@@ -113,18 +121,18 @@ impl AIAgent {
             &self.role,
             game_state,
             &self.reasoning_engine
-        ).await?;
+        )?;
         
         // 记录行动决策
         if let Some(ref action) = action {
-            let memory = NightActionMemory {
+            let memory = crate::types::NightActionMemory {
                 night: game_state.day,
-                my_action: Some(action.clone()),
+                my_action: Some(action.clone() as NightAction),
                 observed_results: Vec::new(),
             };
             self.memory.night_action_history.push(memory);
             
-            info!(\"AI {} 决定夜晚行动: {:?}\", self.player_id, action.action);
+            info!("AI {} 决定夜晚行动: {:?}", self.player_id, action.action);
         }
         
         Ok(action)
@@ -132,23 +140,23 @@ impl AIAgent {
     
     /// 决定投票目标
     pub async fn decide_vote(&mut self, game_state: &GameState) -> AppResult<Option<String>> {
-        debug!(\"AI {} 正在决定投票目标\", self.player_id);
+        debug!("AI {} 正在决定投票目标", self.player_id);
         
         // 更新推理状态
         self.update_reasoning(game_state)?;
         
         // 策略决策
-        let target = self.strategy_engine.decide_vote_target(
+        let target: Option<String> = self.strategy_engine.decide_vote_target(
             game_state,
             &self.reasoning_engine
         ).await?;
         
         if let Some(ref target_id) = target {
-            info!(\"AI {} 决定投票给: {}\", self.player_id, target_id);
+            info!("AI {} 决定投票给: {}", self.player_id, target_id);
             
             // 记录投票决策的推理过程
             let reasoning = self.get_vote_reasoning(target_id);
-            debug!(\"投票推理: {}\", reasoning);
+            debug!("投票推理: {}", reasoning);
         }
         
         Ok(target)
@@ -160,7 +168,7 @@ impl AIAgent {
         game_state: &GameState,
         speech_type: SpeechType
     ) -> AppResult<String> {
-        debug!(\"AI {} 正在生成发言，类型: {:?}\", self.player_id, speech_type);
+        debug!("AI {} 正在生成发言，类型: {:?}", self.player_id, speech_type);
         
         // 更新推理状态
         self.update_reasoning(game_state)?;
@@ -188,10 +196,10 @@ impl AIAgent {
             content: speech.clone(),
             day: game_state.day,
             phase: game_state.phase.clone(),
-            my_reaction: \"我说的话\".to_string(),
+            my_reaction: "我说的话".to_string(),
         });
         
-        info!(\"AI {} 生成发言: {}\", self.player_id, speech);
+        info!("AI {} 生成发言: {}", self.player_id, speech);
         Ok(speech)
     }
     
@@ -202,7 +210,7 @@ impl AIAgent {
         content: String,
         game_state: &GameState
     ) -> AppResult<()> {
-        debug!(\"AI {} 正在处理 {} 的发言\", self.player_id, speaker_id);
+        debug!("AI {} 正在处理 {} 的发言", self.player_id, speaker_id);
         
         // 使用NLP分析发言
         let analysis = self.nlp_processor.analyze_speech(
@@ -226,7 +234,7 @@ impl AIAgent {
             content,
             day: game_state.day,
             phase: game_state.phase.clone(),
-            my_reaction: format!(\"可信度: {:.2}\", analysis.credibility),
+            my_reaction: format!("可信度: {:.2}", analysis.credibility),
         });
         
         Ok(())
@@ -234,7 +242,7 @@ impl AIAgent {
     
     /// 处理投票信息
     pub fn process_vote(&mut self, vote: VoteRecord) -> AppResult<()> {
-        debug!(\"AI {} 处理投票: {} -> {}\", self.player_id, vote.voter, vote.target);
+        debug!("AI {} 处理投票: {} -> {}", self.player_id, vote.voter, vote.target);
         
         // 分析投票行为
         self.reasoning_engine.analyze_vote(
@@ -250,26 +258,26 @@ impl AIAgent {
     
     /// 处理夜晚结果
     pub fn process_night_result(&mut self, result: NightResult) -> AppResult<()> {
-        debug!(\"AI {} 处理夜晚结果\", self.player_id);
+        debug!("AI {} 处理夜晚结果", self.player_id);
         
         // 更新最近的夜晚行动记忆
         if let Some(last_memory) = self.memory.night_action_history.last_mut() {
-            last_memory.observed_results.push(format!(\"{:?}\", result));
+            last_memory.observed_results.push(format!("{:?}", result));
         }
         
         // 根据结果更新推理
         match result {
             NightResult::PlayerKilled(player_id) => {
-                info!(\"AI {} 得知 {} 被杀\", self.player_id, player_id);
+                info!("AI {} 得知 {} 被杀", self.player_id, player_id);
                 // 分析谁可能是凶手
                 self.analyze_kill_target(&player_id);
             }
             NightResult::PlayerSaved => {
-                info!(\"AI {} 得知有人被救\", self.player_id);
+                info!("AI {} 得知有人被救", self.player_id);
                 // 分析女巫行为
             }
             NightResult::NoKill => {
-                info!(\"AI {} 得知平安夜\", self.player_id);
+                info!("AI {} 得知平安夜", self.player_id);
                 // 分析可能的原因
             }
         }
@@ -283,8 +291,8 @@ impl AIAgent {
         
         AIAnalysisReport {
             agent_id: self.player_id.clone(),
-            current_strategy: format!(\"{:?}\", self.strategy_engine),
-            trust_rankings: self.get_trust_rankings(),
+            current_strategy: format!("{:?}", self.strategy_engine),
+            trust_rankings: self.get_trust_rankings().into_iter().map(|(id, _)| id).collect(),
             suspicion_rankings: self.get_suspicion_rankings(),
             reasoning_summary: reasoning_report,
             memory_highlights: self.get_memory_highlights(),
@@ -302,7 +310,7 @@ impl AIAgent {
     fn create_player_snapshot(&self) -> Player {
         Player {
             id: self.player_id.clone(),
-            name: format!(\"AI_{}\", self.player_id),
+            name: format!("AI_{}", self.player_id),
             role: self.role.clone(),
             faction: self.role.faction.clone(),
             is_alive: true,
@@ -315,12 +323,12 @@ impl AIAgent {
         let recent_speeches = self.memory.speech_history.iter()
             .rev()
             .take(3)
-            .map(|s| format!(\"{}: {}\", s.speaker, s.content))
+            .map(|s| format!("{}: {}", s.speaker, s.content))
             .collect::<Vec<_>>()
-            .join(\"\n\");
+            .join("\n");
         
         format!(
-            \"当前阶段: {:?}\n最近发言:\n{}\",
+            "当前阶段: {:?}\n最近发言:\n{}",
             game_state.phase,
             recent_speeches
         )
@@ -343,7 +351,7 @@ impl AIAgent {
         let trust = self.memory.trust_scores.get(target_id).unwrap_or(&0.5);
         
         format!(
-            \"投票给{}：怀疑度{:.2}，信任度{:.2}\",
+            "投票给{}：怀疑度{:.2}，信任度{:.2}",
             target_id, suspicion, trust
         )
     }
@@ -352,7 +360,7 @@ impl AIAgent {
         // 分析为什么这个玩家被杀
         if let Some(trust) = self.memory.trust_scores.get(target_id) {
             if *trust > 0.7 {
-                info!(\"AI {} 认为 {} 被杀是因为太可信\", self.player_id, target_id);
+                info!("AI {} 认为 {} 被杀是因为太可信", self.player_id, target_id);
             }
         }
     }
@@ -365,12 +373,14 @@ impl AIAgent {
         rankings
     }
     
-    fn get_suspicion_rankings(&self) -> Vec<(String, f32)> {
+    // 重复函数定义已移除
+    
+    fn get_suspicion_rankings(&self) -> Vec<String> {
         let mut rankings: Vec<_> = self.memory.suspicion_scores.iter()
             .map(|(id, &score)| (id.clone(), score))
             .collect();
         rankings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-        rankings
+        rankings.into_iter().map(|(id, _)| id).collect()
     }
     
     fn get_memory_highlights(&self) -> Vec<String> {
@@ -379,25 +389,12 @@ impl AIAgent {
         // 最近的重要发言
         for speech in self.memory.speech_history.iter().rev().take(3) {
             highlights.push(format!(
-                \"第{}天{:?}: {} - {}\",
+                "第{}天{:?}: {} - {}",
                 speech.day, speech.phase, speech.speaker, speech.content
             ));
         }
         
         highlights
-    }
-}
-
-impl AIMemory {
-    fn new() -> Self {
-        Self {
-            known_roles: std::collections::HashMap::new(),
-            trust_scores: std::collections::HashMap::new(),
-            suspicion_scores: std::collections::HashMap::new(),
-            voting_history: Vec::new(),
-            speech_history: Vec::new(),
-            night_action_history: Vec::new(),
-        }
     }
 }
 
@@ -414,8 +411,8 @@ pub enum NightResult {
 pub struct AIAnalysisReport {
     pub agent_id: String,
     pub current_strategy: String,
-    pub trust_rankings: Vec<(String, f32)>,
-    pub suspicion_rankings: Vec<(String, f32)>,
+    pub trust_rankings: Vec<String>,
+    pub suspicion_rankings: Vec<String>,
     pub reasoning_summary: crate::ai::reasoning::ReasoningReport,
     pub memory_highlights: Vec<String>,
 }

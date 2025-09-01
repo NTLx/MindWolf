@@ -49,7 +49,7 @@ pub async fn update_llm_config(
     // 重新创建LLM管理器
     let llm_manager = Arc::new(LLMManager::new(config, vec![]));
     let mut llm_state = state.llm_manager.write().await;
-    *llm_state = Some(llm_manager.as_ref().clone());
+    *llm_state = Some((*llm_manager).clone());
     
     // 更新游戏管理器的LLM管理器
     let mut game_manager = state.game_manager.write().await;

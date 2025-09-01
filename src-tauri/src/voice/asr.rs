@@ -4,6 +4,7 @@ use std::process::Command;
 use tokio::fs;
 use log::{info, warn, debug};
 use std::path::PathBuf;
+use chrono::Utc;
 
 /// 语音识别引擎
 pub struct ASREngine {
@@ -20,6 +21,17 @@ impl ASREngine {
             config: config.clone(),
             model_path,
         })
+    }
+    
+    /// 初始化ASR引擎
+    pub async fn initialize(&mut self) -> AppResult<()> {
+        // 检查模型可用性
+        if !self.is_available() {
+            return Err(AppError::Config("语音识别不可用".to_string()));
+        }
+        
+        info!("语音识别引擎初始化完成");
+        Ok(())
     }
     
     /// 语音识别
@@ -46,7 +58,7 @@ impl ASREngine {
     /// 保存临时音频文件
     async fn save_temp_audio(&self, audio_data: &[u8]) -> AppResult<PathBuf> {
         let temp_dir = std::env::temp_dir();
-        let temp_path = temp_dir.join(format!(\"mindwolf_audio_{}.wav\", chrono::Utc::now().timestamp()));
+        let temp_path = temp_dir.join(format!("mindwolf_audio_{}.wav", Utc::now().timestamp()));
         
         fs::write(&temp_path, audio_data).await
             .map_err(|e| AppError::Io(e.to_string()))?;
@@ -67,22 +79,22 @@ impl ASREngine {
     
     /// 本地Whisper识别
     async fn local_whisper_recognize(&self, audio_path: &PathBuf) -> AppResult<String> {
-        let output = Command::new(\"whisper\")
+        let output = Command::new("whisper")
             .arg(audio_path)
-            .arg(\"--language\")
+            .arg("--language")
             .arg(&self.config.language)
-            .arg(\"--output_format\")
-            .arg(\"txt\")
+            .arg("--output_format")
+            .arg("txt")
             .output()
-            .map_err(|e| AppError::Io(format!(\"执行Whisper失败: {}\", e)))?;
+            .map_err(|e| AppError::Io(format!("执行Whisper失败: {}", e)))?;
         
         if output.status.success() {
             let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            debug!(\"Whisper识别结果: {}\", text);
+            debug!("Whisper识别结果: {}", text);
             Ok(text)
         } else {
             let error = String::from_utf8_lossy(&output.stderr);
-            Err(AppError::Io(format!(\"Whisper识别失败: {}\", error)))
+            Err(AppError::Io(format!("Whisper识别失败: {}", error)))
         }
     }
     
@@ -90,17 +102,17 @@ impl ASREngine {
     async fn mock_recognize(&self, _audio_path: &PathBuf) -> AppResult<String> {
         // 模拟语音识别结果
         let mock_results = [
-            \"我觉得1号玩家很可疑\",
-            \"我是预言家，昨晚验了3号是好人\",
-            \"我不是狼人，请大家相信我\",
-            \"我投票给2号玩家\",
-            \"我需要再想想\"
+            "我觉得1号玩家很可疑",
+            "我是预言家，昨晚验了3号是好人",
+            "我不是狼人，请大家相信我",
+            "我投票给2号玩家",
+            "我需要再想想"
         ];
         
-        let index = chrono::Utc::now().timestamp() as usize % mock_results.len();
+        let index = Utc::now().timestamp() as usize % mock_results.len();
         let result = mock_results[index].to_string();
         
-        info!(\"模拟语音识别结果: {}\", result);
+        info!("模拟语音识别结果: {}", result);
         
         // 模拟处理延时
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
@@ -141,10 +153,10 @@ pub struct ASRConfig {
 impl Default for ASRConfig {
     fn default() -> Self {
         Self {
-            language: \"zh\".to_string(),
-            model_size: \"base\".to_string(),
+            language: "zh".to_string(),
+            model_size: "base".to_string(),
             temperature: 0.0,
             best_of: 5,
         }
     }
-}"
+}

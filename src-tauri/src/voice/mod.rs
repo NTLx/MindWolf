@@ -1,4 +1,4 @@
-pub mod asr;
+﻿pub mod asr;
 pub mod tts;
 pub mod audio;
 
@@ -6,7 +6,7 @@ pub use asr::*;
 pub use tts::*;
 pub use audio::*;
 
-use crate::error::Result;
+use crate::error::AppResult;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use serde::{Serialize, Deserialize};
@@ -46,19 +46,19 @@ pub struct VoiceManager {
 
 impl VoiceManager {
     /// 创建语音管理器
-    pub fn new(config: VoiceConfig) -> Self {
-        Self {
-            config,
-            asr_engine: Arc::new(Mutex::new(ASREngine::new())),
-            tts_engine: Arc::new(Mutex::new(TTSEngine::new())),
+    pub fn new(config: VoiceConfig) -> AppResult<Self> {
+        Ok(Self {
+            config: config.clone(),
+            asr_engine: Arc::new(Mutex::new(ASREngine::new(&config)?)),
+            tts_engine: Arc::new(Mutex::new(TTSEngine::new(&config)?)),
             audio_manager: Arc::new(AudioManager::new()),
             is_enabled: Arc::new(Mutex::new(false)),
-        }
+        })
     }
     
     /// 初始化语音系统
-    pub async fn initialize(&self) -> Result<()> {
-        log::info("正在初始化语音系统...");
+    pub async fn initialize(&self) -> AppResult<()> {
+        log::info!("正在初始化语音系统...");
         
         // 初始化音频管理器
         self.audio_manager.initialize().await?;
@@ -76,12 +76,12 @@ impl VoiceManager {
         // 启用语音功能
         *self.is_enabled.lock().await = true;
         
-        log::info("语音系统初始化完成");
+        log::info!("语音系统初始化完成");
         Ok(())
     }
     
     /// 开始录音
-    pub async fn start_recording(&self) -> Result<()> {
+    pub async fn start_recording(&self) -> AppResult<()> {
         if !self.config.enable_asr {
             return Err(crate::error::AppError::Config("语音识别未启用".to_string()).into());
         }
@@ -90,17 +90,17 @@ impl VoiceManager {
     }
     
     /// 停止录音并识别
-    pub async fn stop_recording_and_recognize(&self) -> Result<String> {
+    pub async fn stop_recording_and_recognize(&self) -> AppResult<String> {
         if !self.config.enable_asr {
             return Err(crate::error::AppError::Config("语音识别未启用".to_string()).into());
         }
         
-        let audio_data = self.audio_manager.stop_recording().await?;
+        let audio_data: Vec<u8> = self.audio_manager.stop_recording().await?;
         self.asr_engine.lock().await.recognize(&audio_data).await
     }
     
     /// 文本转语音
-    pub async fn text_to_speech(&self, text: &str) -> Result<Vec<u8>> {
+    pub async fn text_to_speech(&self, text: &str) -> AppResult<Vec<u8>> {
         if !self.config.enable_tts {
             return Err(crate::error::AppError::Config("语音合成未启用".to_string()).into());
         }
@@ -109,7 +109,7 @@ impl VoiceManager {
     }
     
     /// 播放语音
-    pub async fn play_audio(&self, audio_data: &[u8]) -> Result<()> {
+    pub async fn play_audio(&self, audio_data: &[u8]) -> AppResult<()> {
         self.audio_manager.play_audio(audio_data.to_vec()).await
     }
     
@@ -129,27 +129,27 @@ impl VoiceManager {
     }
     
     /// 获取语音设置
-    pub async fn get_audio_settings(&self) -> Result<AudioSettings> {
+    pub async fn get_audio_settings(&self) -> AppResult<AudioSettings> {
         self.audio_manager.get_settings().await
     }
     
     /// 设置语音参数
-    pub async fn set_audio_settings(&self, settings: AudioSettings) -> Result<()> {
+    pub async fn set_audio_settings(&self, settings: AudioSettings) -> AppResult<()> {
         self.audio_manager.set_settings(settings).await
     }
     
     /// 获取音频设备列表
-    pub async fn get_audio_devices(&self) -> Result<Vec<AudioDevice>> {
+    pub async fn get_audio_devices(&self) -> AppResult<Vec<AudioDevice>> {
         self.audio_manager.get_devices().await
     }
     
     /// 设置输出音量
-    pub async fn set_output_volume(&self, volume: f32) -> Result<()> {
+    pub async fn set_output_volume(&self, volume: f32) -> AppResult<()> {
         self.audio_manager.set_output_volume(volume).await
     }
     
     /// 获取输出音量
-    pub async fn get_output_volume(&self) -> Result<f32> {
+    pub async fn get_output_volume(&self) -> AppResult<f32> {
         self.audio_manager.get_output_volume().await
     }
     
@@ -164,10 +164,10 @@ impl VoiceManager {
     }
     
     /// 关闭语音管理器
-    pub async fn shutdown(&self) -> Result<()> {
+    pub async fn shutdown(&self) -> AppResult<()> {
         *self.is_enabled.lock().await = false;
         self.audio_manager.shutdown().await?;
-        log::info("语音管理器已关闭");
+        log::info!("语音管理器已关闭");
         Ok(())
     }
 }
